@@ -15,10 +15,10 @@ import json
 from Queue import Queue
 
 
-IP_FGBAM = "192.168.2.77"
+IP_FGBAM = "192.168.56.101"
 PORT_FGBAM = 6634
 
-IP_CONTROLLER = "192.168.2.77"
+IP_CONTROLLER = "192.168.56.101"
 PORT_CONTROLLER = 6633
 
 THREAD_LIST = []
@@ -211,48 +211,55 @@ class ofp_flow_mod(ofp_header):
             return False
     """
     def check_rules(self):
-        connect_db = connectDB.get_QoS_setting();
-        connect_db.select_qosSetting_fgbamDB()
-        protocol_number = {'tcp' : "6" , 'TCP' : "6" , 'udp' : "17" , 'UDP' : "17" ,'17' : "17" ,'6' : "6" , 'any' : "any"}
-
-        table_qos_setting = connect_db.table_qos_setting
-        #print table_qos_setting
-
         temp_list = []
-        for record_qos_setting in table_qos_setting:
-            flag = True
-            count_any = 0
-            if record_qos_setting[1] != self.match.nw_src and record_qos_setting[1] != "any":
-                flag = False
-            else:
-                if record_qos_setting[1] != "any":
-                    count_any += 1
-                if record_qos_setting[2] != self.match.nw_dst and record_qos_setting[2] != "any":
+        connect_db = connectDB.get_QoS_setting();
+
+        #Connected with DB Success!!
+        if connect_db.connection_failed == False:
+
+            connect_db.select_qosSetting_fgbamDB()
+            protocol_number = {'tcp' : "6" , 'TCP' : "6" , 'udp' : "17" , 'UDP' : "17" ,'17' : "17" ,'6' : "6" , 'any' : "any"}
+
+            table_qos_setting = connect_db.table_qos_setting
+            #print table_qos_setting
+
+
+            for record_qos_setting in table_qos_setting:
+                flag = True
+                count_any = 0
+                if record_qos_setting[1] != self.match.nw_src and record_qos_setting[1] != "any":
                     flag = False
                 else:
-                    if record_qos_setting[2] != "any":
+                    if record_qos_setting[1] != "any":
                         count_any += 1
-                    if protocol_number[record_qos_setting[5]] != str(self.match.nw_proto) and protocol_number[record_qos_setting[5]] != "any":
+                    if record_qos_setting[2] != self.match.nw_dst and record_qos_setting[2] != "any":
                         flag = False
                     else:
-                        if record_qos_setting[5] != "any":
+                        if record_qos_setting[2] != "any":
                             count_any += 1
-                        if record_qos_setting[3] != str(self.match.tp_src) and record_qos_setting[3] != "any":
+                        if protocol_number[record_qos_setting[5]] != str(self.match.nw_proto) and protocol_number[record_qos_setting[5]] != "any":
                             flag = False
                         else:
-                            if record_qos_setting[3] != "any":
+                            if record_qos_setting[5] != "any":
                                 count_any += 1
-                            if record_qos_setting[4] != str(self.match.tp_dst) and record_qos_setting[4] != "any":
+                            if record_qos_setting[3] != str(self.match.tp_src) and record_qos_setting[3] != "any":
                                 flag = False
                             else:
-                                if record_qos_setting[4] != "any":
+                                if record_qos_setting[3] != "any":
                                     count_any += 1
+                                if record_qos_setting[4] != str(self.match.tp_dst) and record_qos_setting[4] != "any":
+                                    flag = False
+                                else:
+                                    if record_qos_setting[4] != "any":
+                                        count_any += 1
 
-            if flag == True:
-                temp_rule = Rules(record_qos_setting[0],record_qos_setting[1],record_qos_setting[2],record_qos_setting[5],record_qos_setting[3],record_qos_setting[4],record_qos_setting[6],None,None)
-                on_process = {'rule': temp_rule , 'count_any': count_any , 'status_id' : record_qos_setting[8]}
-                temp_list.append(on_process)
+                if flag == True:
+                    temp_rule = Rules(record_qos_setting[0],record_qos_setting[1],record_qos_setting[2],record_qos_setting[5],record_qos_setting[3],record_qos_setting[4],record_qos_setting[6],None,None)
+                    on_process = {'rule': temp_rule , 'count_any': count_any , 'status_id' : record_qos_setting[8]}
+                    temp_list.append(on_process)
 
+
+        #Have not any rules
         if len(temp_list) == 0:
             return False,None
         else:
@@ -495,7 +502,6 @@ class communication_SwCtrler(threading.Thread):
                             temp_port = port(_port.number,_port.mac_addr,_port.name,neighbor_port)
                             self.list_ports.append(temp_port)
                             self.list_ports.remove(_port)
-                            print "eieieieieieieieieieiei: "+str(self.list_port)
                             break
                         else:
                             for list_port in _thread.list_ports:
@@ -519,7 +525,7 @@ class communication_SwCtrler(threading.Thread):
                                         temp_port = port(_port.number,_port.mac_addr,_port.name,neighbor_port)
                                         self.list_ports.append(temp_port)
                                         self.list_ports.remove(_port)
-                                        print "hahahahahahahahaha: "+str(self.list_port)
+
                                         break
                         except AttributeError:
                             print "NoneType"
@@ -598,6 +604,7 @@ class communication_SwCtrler(threading.Thread):
                             flag1,rule = flowmod_msg.check_rules()
                             if flag1:
                                 flag2,queue_id = self.isAdded(rule)
+                            
 
                             print 'flag1: ' + str(flag1)
                             print 'flag2: ' + str(flag2)
@@ -824,6 +831,7 @@ if __name__ == "__main__":
     sock_serv.bind((IP_FGBAM, PORT_FGBAM))
     q.put(switches_list)
     sock_serv.listen(10)
+    print "Starting FGBAM on" + IP_FGBAM + ":" + str(PORT_FGBAM)
     try:
         while True:
             conn, addr = sock_serv.accept()

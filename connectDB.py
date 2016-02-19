@@ -7,13 +7,17 @@ class get_QoS_setting(object):
 
         self.db = None
         self.cursor = None
-
+        self.connection_failed = False
         self.connect_fgbamDB()
 
 
     def connect_fgbamDB(self):
         #Open database connection
-        self.db = MySQLdb.connect("localhost","root","fgbam","fgbam" )
+        try:
+            self.db = MySQLdb.connect("localhost","root","fgbam","fgbam" )
+        except:
+            self.connection_failed = True
+
 
         # prepare a cursor object using cursor() method
         self.cursor = self.db.cursor()
@@ -47,3 +51,10 @@ class get_QoS_setting(object):
            print "Error: unable to update data"
 
         # disconnect from server
+
+
+
+
+
+
+
