@@ -20,7 +20,8 @@ class get_QoS_setting(object):
 
 
         # prepare a cursor object using cursor() method
-        self.cursor = self.db.cursor()
+        if self.connection_failed == False:
+            self.cursor = self.db.cursor()
 
         # execute SQL query using execute() method.
     def select_qosSetting_fgbamDB(self):
