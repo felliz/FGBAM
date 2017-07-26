@@ -15,9 +15,6 @@ import json
 from Queue import Queue
 
 
-IP_FGBAM = "172.31.25.132"
-PORT_FGBAM = 6634
-
 IP_CONTROLLER = "13.73.2.255"
 PORT_CONTROLLER = 6633
 
@@ -56,6 +53,13 @@ Rules = namedtuple('Rules', ['protocol_id','src_ip', 'dst_ip','proto','src_port'
 
 q = Queue(maxsize=1)
 switches_list = []
+
+def get_localhost_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    ip_fgbam = s.getsockname()[0]
+    s.close()
+    return ip_fgbam
 
 def eth_addr(a):
     b = "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x" % (ord(a[0]), ord(a[1]), ord(a[2]), ord(a[3]), ord(a[4]), ord(a[5]))
@@ -823,15 +827,18 @@ class communication_SwCtrler(threading.Thread):
         sockCtrl.close()
 
 
+
+
 if __name__ == "__main__":
 
     logging.basicConfig(filename='fgbam.log',level=logging.DEBUG)
     sock_serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock_serv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock_serv.bind((IP_FGBAM, PORT_FGBAM))
+    ip_fgbam = get_localhost_ip()
+    sock_serv.bind((ip_fgbam, 6634))
     q.put(switches_list)
     sock_serv.listen(10)
-    print "Starting FGBAM on" + IP_FGBAM + ":" + str(PORT_FGBAM)
+    print "Starting FGBAM on" + ip_fgbam + ":" + str(6634)
     try:
         while True:
             conn, addr = sock_serv.accept()
