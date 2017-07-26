@@ -735,81 +735,81 @@ class communication_SwCtrler(threading.Thread):
                             #list_datapath_id.append(self.datapath_id)
 
                         #packet-in
-                        elif ofp_msg.type == 10:
-                            lt = learningTopo.handle_packetIn(data_from_device)
-
-                            if lt.total_len >= 14:
-                                lt.analyse_packet()
-
-                                if len(self.neighbor) < self.numOfphyPort and lt.neighbor != None and lt.neighbor != self.localPort.mac_addr:
-
-                                    try:
-                                        temp_datapath = int("".join(lt.neighbor.split(":")))
-                                        for _thread in THREAD_LIST:
-                                            if _thread.datapath_id == temp_datapath:
-                                                self.neighbor[str(lt.in_port)] = _thread.localPort.name
-                                                for _port in self.list_ports:
-                                                    if _port.number == lt.in_port:
-                                                        temp_port = port(_port.number,_port.mac_addr,_port.name,_thread.localPort)
-                                                        self.list_ports.append(temp_port)
-                                                        self.list_ports.remove(_port)
-
-                                        print self.list_ports
-                                    except ValueError:
-                                        if self.isIP(lt.neighbor):
-                                            print(lt.neighbor)
-                                            for _port in self.list_ports:
-                                                if _port.number == lt.in_port and not self.isHostAdded(lt.neighbor):
-                                                    self.neighbor[str(lt.in_port)] = lt.neighbor
-                                                    temp_port = port(_port.number,_port.mac_addr,_port.name,lt.neighbor)
-                                                    self.list_ports.append(temp_port)
-                                                    self.list_ports.remove(_port)
-                                                    self.list_hostsIP.append(lt.neighbor)
-
-                                                    #print self.list_ports
-
-                                        elif self.isMac(lt.neighbor):
-                                            self.update_listPort(lt.neighbor,lt.in_port)
-                                            #print self.list_ports
-
-
-                                    with open('topology.json','w+') as filetopo:
-                                        temp_list_port = []
-                                        temp_dict_switch = {}
-                                        temp_dict_switches = {}
-                                        for _port in self.list_ports:
-                                            temp_dict_port = {}
-                                            temp_dict_port['port#'] = _port.number
-                                            temp_dict_port['mac_addr'] = _port.mac_addr
-                                            temp_dict_port['port_name'] = _port.name
-
-                                            if self.isIP(_port.neighbor):
-                                                temp_neightbor = {'host_ip' : _port.neighbor}
-                                            elif _port.neighbor != None :
-                                                temp_neightbor = {'port#' : _port.neighbor.number ,'mac_addr' : _port.neighbor.mac_addr , 'port_name' : _port.neighbor.name , 'neighbor' : _port.neighbor.neighbor }
-                                            else:
-                                                temp_neightbor = None
-
-                                            temp_dict_port['neighbor'] = temp_neightbor
-                                            temp_list_port.append(temp_dict_port)
-
-                                        temp_dict_switch[self.nameOfSwitch] = temp_list_port
-                                        if not q.empty():
-                                            switches_list = q.get()
-                                            _added = True
-                                            for index, switch in enumerate(switches_list):
-                                                for key in switch:
-                                                    if key == self.nameOfSwitch:
-                                                        switches_list[index] = temp_dict_switch
-                                                        _added = False
-                                                        break
-                                            if _added:
-                                                switches_list.append(temp_dict_switch)
-
-                                            temp_dict_switches['switches'] = switches_list
-                                            json.dump(temp_dict_switches,filetopo)
-                                            q.task_done()
-                                            q.put(switches_list)
+                        # elif ofp_msg.type == 10:
+                        #     lt = learningTopo.handle_packetIn(data_from_device)
+                        #
+                        #     if lt.total_len >= 14:
+                        #         lt.analyse_packet()
+                        #
+                        #         if len(self.neighbor) < self.numOfphyPort and lt.neighbor != None and lt.neighbor != self.localPort.mac_addr:
+                        #
+                        #             try:
+                        #                 temp_datapath = int("".join(lt.neighbor.split(":")))
+                        #                 for _thread in THREAD_LIST:
+                        #                     if _thread.datapath_id == temp_datapath:
+                        #                         self.neighbor[str(lt.in_port)] = _thread.localPort.name
+                        #                         for _port in self.list_ports:
+                        #                             if _port.number == lt.in_port:
+                        #                                 temp_port = port(_port.number,_port.mac_addr,_port.name,_thread.localPort)
+                        #                                 self.list_ports.append(temp_port)
+                        #                                 self.list_ports.remove(_port)
+                        #
+                        #                 print self.list_ports
+                        #             except ValueError:
+                        #                 if self.isIP(lt.neighbor):
+                        #                     print(lt.neighbor)
+                        #                     for _port in self.list_ports:
+                        #                         if _port.number == lt.in_port and not self.isHostAdded(lt.neighbor):
+                        #                             self.neighbor[str(lt.in_port)] = lt.neighbor
+                        #                             temp_port = port(_port.number,_port.mac_addr,_port.name,lt.neighbor)
+                        #                             self.list_ports.append(temp_port)
+                        #                             self.list_ports.remove(_port)
+                        #                             self.list_hostsIP.append(lt.neighbor)
+                        #
+                        #                             #print self.list_ports
+                        #
+                        #                 elif self.isMac(lt.neighbor):
+                        #                     self.update_listPort(lt.neighbor,lt.in_port)
+                        #                     #print self.list_ports
+                        #
+                        #
+                        #             with open('topology.json','w+') as filetopo:
+                        #                 temp_list_port = []
+                        #                 temp_dict_switch = {}
+                        #                 temp_dict_switches = {}
+                        #                 for _port in self.list_ports:
+                        #                     temp_dict_port = {}
+                        #                     temp_dict_port['port#'] = _port.number
+                        #                     temp_dict_port['mac_addr'] = _port.mac_addr
+                        #                     temp_dict_port['port_name'] = _port.name
+                        #
+                        #                     if self.isIP(_port.neighbor):
+                        #                         temp_neightbor = {'host_ip' : _port.neighbor}
+                        #                     elif _port.neighbor != None :
+                        #                         temp_neightbor = {'port#' : _port.neighbor.number ,'mac_addr' : _port.neighbor.mac_addr , 'port_name' : _port.neighbor.name , 'neighbor' : _port.neighbor.neighbor }
+                        #                     else:
+                        #                         temp_neightbor = None
+                        #
+                        #                     temp_dict_port['neighbor'] = temp_neightbor
+                        #                     temp_list_port.append(temp_dict_port)
+                        #
+                        #                 temp_dict_switch[self.nameOfSwitch] = temp_list_port
+                        #                 if not q.empty():
+                        #                     switches_list = q.get()
+                        #                     _added = True
+                        #                     for index, switch in enumerate(switches_list):
+                        #                         for key in switch:
+                        #                             if key == self.nameOfSwitch:
+                        #                                 switches_list[index] = temp_dict_switch
+                        #                                 _added = False
+                        #                                 break
+                        #                     if _added:
+                        #                         switches_list.append(temp_dict_switch)
+                        #
+                        #                     temp_dict_switches['switches'] = switches_list
+                        #                     json.dump(temp_dict_switches,filetopo)
+                        #                     q.task_done()
+                        #                     q.put(switches_list)
 
 
 
