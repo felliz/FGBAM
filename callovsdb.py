@@ -171,7 +171,8 @@ def create_queue(name_port,bw,id,ovsdb_IP=None,ovsdb_Port=6640):
     if not qos_in_port:
         uuid_default_queue = create_defaultQueue(s,10000000000,db_name,current_id)
         current_id += 1
-        result = insert_QoS(s,uuid_default_queue,str(link_speed),db_name,current_id)
+        #result = insert_QoS(s,uuid_default_queue,str(link_speed),db_name,current_id)
+        result = insert_QoS(s,uuid_default_queue,str(10000000000),db_name,current_id)
 
         current_id += 1
         uuid_qos_temp = result['result'][0]

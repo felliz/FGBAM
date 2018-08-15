@@ -7,7 +7,7 @@ import select
 import callovsdb
 from collections import namedtuple
 import logging
-import datetime
+import datetime, time
 import sys
 import learningTopo
 import connectDB
@@ -15,7 +15,10 @@ import json
 from Queue import Queue
 
 
-IP_CONTROLLER = "13.73.2.255"
+IP_FGBAM = "172.16.132.134"
+PORT_FGBAM = 6634
+
+IP_CONTROLLER = "172.16.132.134"
 PORT_CONTROLLER = 6633
 
 THREAD_LIST = []
@@ -53,13 +56,6 @@ Rules = namedtuple('Rules', ['protocol_id','src_ip', 'dst_ip','proto','src_port'
 
 q = Queue(maxsize=1)
 switches_list = []
-
-def get_localhost_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    ip_fgbam = s.getsockname()[0]
-    s.close()
-    return ip_fgbam
 
 def eth_addr(a):
     b = "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x" % (ord(a[0]), ord(a[1]), ord(a[2]), ord(a[3]), ord(a[4]), ord(a[5]))
@@ -116,6 +112,7 @@ class ofp_match(object):
         current_index = 8
         of_match_hex = self.match_tuple[current_index:current_index+40]
         of_match = struct.unpack('!LH6s6sHBBHBBH4s4sHH',of_match_hex)
+	print of_match
         self.wildcards = of_match[0]
         self.in_port = of_match[1]
         self.dl_src = eth_addr(self.match_tuple[current_index+6:current_index+6+6])
@@ -222,11 +219,16 @@ class ofp_flow_mod(ofp_header):
         if connect_db.connection_failed == False:
 
             connect_db.select_qosSetting_fgbamDB()
-            protocol_number = {'tcp' : "6" , 'TCP' : "6" , 'udp' : "17" , 'UDP' : "17" ,'17' : "17" ,'6' : "6" , 'any' : "any"}
+            protocol_number = {'tcp' : "6" , 'TCP' : "6" , 'udp' : "17" , 'UDP' : "17" ,'17' : "17" ,'6' : "6" ,'icmp' : "1"  , 'ICMP' : "1", '1' : "1", 'any' : "any"}
 
             table_qos_setting = connect_db.table_qos_setting
-            #print table_qos_setting
+            print table_qos_setting
 
+	    print "nw_src: " + str(self.match.nw_src)
+	    print "nw_dst: " + str(self.match.nw_dst)
+	    print "nw_proto: " + str(self.match.nw_proto)
+	    print "tp_src: " + str(self.match.tp_src)
+	    print "tp_dst: " + str(self.match.tp_dst)
 
             for record_qos_setting in table_qos_setting:
                 flag = True
@@ -391,7 +393,7 @@ class communication_SwCtrler(threading.Thread):
             for nameport in self.list_ports:
                 #print "outport: " + str(outport)
                 #print "dasd: " + nameport.name[-1:]
-                if str(outport) == nameport.name[nameport.name.find('eth')+len('eth'):]:
+                if outport == nameport.number:
                     return nameport.name
 
     def isAdded(self,r):
@@ -582,7 +584,7 @@ class communication_SwCtrler(threading.Thread):
         self.list_sock.append(sockCtrl)
         print str(self.ip) + ':' + str(self.port) + " connected with controller"
         flag2 = True
-
+	t1=0
 
         while not self.stopped():
             readsocks, writesocks, errorsocks = select.select(self.list_sock, [], [])
@@ -591,7 +593,10 @@ class communication_SwCtrler(threading.Thread):
                 #Handle data from SDN Controller
                 if sock == sockCtrl:
                     data_from_controller = sockCtrl.recvfrom(RECVBUFFER)
+		    t1 = time.time()
+		    #print "data_from_controller: ",data_from_controller
                     data_from_controller = data_from_controller[0]
+		    #print "data_from_controller[0]: ",data_from_controller[0]
                     if len(data_from_controller) >= 8:
                         of_header = ofp_header(data_from_controller)
                         #print "From Controller:"
@@ -603,8 +608,7 @@ class communication_SwCtrler(threading.Thread):
                             #print "flowmod"
                             flowmod_msg = ofp_flow_mod(data_from_controller)
                             flowmod_msg.unpack()
-
-
+				
                             flag1,rule = flowmod_msg.check_rules()
                             if flag1:
                                 flag2,queue_id = self.isAdded(rule)
@@ -612,26 +616,35 @@ class communication_SwCtrler(threading.Thread):
 
                             print 'flag1: ' + str(flag1)
                             print 'flag2: ' + str(flag2)
+                            print 'rule' + str(rule)
 
                             if flowmod_msg.actions:
                                 name_port = self.match_nameport(flowmod_msg.actions[0].out_port)
+			    	print "flowmod_msg.actions: ", flowmod_msg.actions
+                            	print "flowmod_msg.actions[0].out_port: "  + str(flowmod_msg.actions[0].out_port)
+				if name_port:
+			    		print "nameport: " + str(name_port)
 
                             #flag,rule_inverse = self.isInverse(flowmod_msg)
                             #print 'flag: ' + str(flag)
                             update_db = connectDB.get_QoS_setting()
+			    #print "flowmod_msg.actions: ", flowmod_msg.actions
+                            #print "flowmod_msg.actions[0].out_port: "  + str(flowmod_msg.actions[0].out_port)
+                            #print "nameport: " + str(name_port)
 
-                            if flag1 and name_port is not None and (flowmod_msg.match.nw_proto == 6 or flowmod_msg.match.nw_proto == 17):
-
+                            if flag1 and name_port is not None and (flowmod_msg.match.nw_proto == 6 or flowmod_msg.match.nw_proto == 17 or flowmod_msg.match.nw_proto == 1):
+                                print "flowmod_msg.status_id: " + str(flowmod_msg.status_id)
 
 
                                 if not flag2 and  flowmod_msg.status_id == 0:
+
                                     self.current_id ,queue_id,uuid_queue = callovsdb.create_queue(name_port,rule.bandwidth,self.current_id,str(self.ip),6640)
                                     logging.info('create queue: '+str(datetime.datetime.now().date())+' '+str(datetime.datetime.now().time()) +' queue#' + str(queue_id) + ' in ' + str(name_port))
                                     r = Rules(rule.protocol_id,rule.src_ip,rule.dst_ip,rule.proto,rule.src_port,rule.dst_port,rule.bandwidth,queue_id,uuid_queue)
 
                                     #r = Rules(rule.protocol_id,flowmod_msg.match.nw_src,flowmod_msg.match.nw_dst,flowmod_msg.match.nw_proto,flowmod_msg.match.tp_src,flowmod_msg.match.tp_dst,rule.bandwidth,queue_id,uuid_queue)
                                     logging.info(str(datetime.datetime.now().date())+' '+str(datetime.datetime.now().time())+ ' ' +str(r) )
-                                    self.list_rule_added.append(r)
+                                    #self.list_rule_added.append(r)
 
                                 elif flowmod_msg.status_id == 1:
                                     print "DELETE"
@@ -664,9 +677,10 @@ class communication_SwCtrler(threading.Thread):
 
                                         r = Rules(rule.protocol_id,flowmod_msg.match.nw_src,flowmod_msg.match.nw_dst,flowmod_msg.match.nw_proto,flowmod_msg.match.tp_src,flowmod_msg.match.tp_dst,rule.bandwidth,queue_id,uuid_queue)
                                         logging.info(str(datetime.datetime.now().date())+' '+str(datetime.datetime.now().time())+ ' ' +str(r) )
-                                        self.list_rule_added.append(r)
+                                        #self.list_rule_added.append(r)
 
-                                print queue_id
+                                print "queue_id: ", queue_id
+				print "flowmod_msg.actions", flowmod_msg.actions
                                 enqueue_msg = ofp_action_enqueue(flowmod_msg.actions[0].out_port,queue_id)
 
                                 for _port in self.list_ports:
@@ -693,8 +707,9 @@ class communication_SwCtrler(threading.Thread):
 
                             else:
                                 flag,queue_id = self.onProcessed(flowmod_msg,"check")
+				print "TEST@1"
                                 if flag1 == False and flag == True:
-
+				    print "TEST@2"
                                     enqueue_msg = ofp_action_enqueue(flowmod_msg.actions[0].out_port,queue_id)
                                     new_ofp_header = ofp_header()
                                     new_ofp_header.version = 1
@@ -707,12 +722,13 @@ class communication_SwCtrler(threading.Thread):
                                     flowmod_msg.actions.pop()
                                     flowmod_msg.actions.append(enqueue_msg)
                                     #flowmod_msg.match.nw_tos = 0
-
-
                                     data_from_controller = new_ofp_header.pack() + flowmod_msg.pack()
+				#data_from_controller = of_header.pack() + 
+				else:
+				    print "FlowMod: ",flowmod_msg.match.nw_src,flowmod_msg.match.tp_src,flowmod_msg.match.nw_dst,flowmod_msg.match.tp_dst
+				    #data_from_controller = of_header.pack() + flowmod_msg.pack()
 
-
-
+		    #print "SEND PACKET: ",data_from_controller
                     self.conn.send(data_from_controller)
                 #Handle data from open_vswitch
                 else:
@@ -726,7 +742,7 @@ class communication_SwCtrler(threading.Thread):
                         if ofp_msg.type == 6:
                             ofp_feature_res_msg = ofp_feature_response(data_from_device)
                             self.list_ports = ofp_feature_res_msg.unpack()
-                            print self.list_ports
+                            print "list_ports: " + str(self.list_ports)
                             for _port in self.list_ports:
                                 if str(_port.number) == "65534":
                                     self.localPort = _port
@@ -820,25 +836,23 @@ class communication_SwCtrler(threading.Thread):
                             #print 'S' + str(self.datapath_id)+": "+str(self.neighbor)
 
                     sockCtrl.send(data_from_device)
-
+		    t2 = time.time()
+		    #logging.info(str(datetime.datetime.now().date())+' '+str(datetime.datetime.now().time())+ ' ' +'Time: '+str(t2-t1)) 
 
 
         conn.close()
         sockCtrl.close()
 
 
-
-
 if __name__ == "__main__":
 
-    logging.basicConfig(filename='fgbam.log',level=logging.DEBUG)
+    logging.basicConfig(filename='/home/wisarutk/FGBAM/fgbam.log',level=logging.DEBUG)
     sock_serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock_serv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    ip_fgbam = get_localhost_ip()
-    sock_serv.bind((ip_fgbam, 6634))
+    sock_serv.bind((IP_FGBAM, PORT_FGBAM))
     q.put(switches_list)
     sock_serv.listen(10)
-    print "Starting FGBAM on" + ip_fgbam + ":" + str(6634)
+    print "Starting FGBAM on" + IP_FGBAM + ":" + str(PORT_FGBAM)
     try:
         while True:
             conn, addr = sock_serv.accept()
