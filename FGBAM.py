@@ -726,6 +726,8 @@ class communication_SwCtrler(threading.Thread):
 				#data_from_controller = of_header.pack() + 
 				else:
 				    print "FlowMod: ",flowmod_msg.match.nw_src,flowmod_msg.match.tp_src,flowmod_msg.match.nw_dst,flowmod_msg.match.tp_dst
+				    logging.info('FlowMod: %s %s %s %s',str(flowmod_msg.match.nw_src),str(flowmod_msg.match.tp_src),str(flowmod_msg.match.nw_dst),str(flowmod_msg.match.tp_dst))
+
 				    #data_from_controller = of_header.pack() + flowmod_msg.pack()
 
 		    #print "SEND PACKET: ",data_from_controller
