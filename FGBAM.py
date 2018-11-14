@@ -632,7 +632,7 @@ class communication_SwCtrler(threading.Thread):
                             #print "flowmod_msg.actions[0].out_port: "  + str(flowmod_msg.actions[0].out_port)
                             #print "nameport: " + str(name_port)
 
-                            if flag1 and name_port is not None and (flowmod_msg.match.nw_proto == 6 or flowmod_msg.match.nw_proto == 17 or flowmod_msg.match.nw_proto == 1):
+                            if flag1 and name_port is not None and (flowmod_msg.match.nw_proto == 6 or flowmod_msg.match.nw_proto == 17 or flowmod_msg.match.nw_proto == 1 or flowmod_msg.match.nw_proto == 0):
                                 print "flowmod_msg.status_id: " + str(flowmod_msg.status_id)
 
 

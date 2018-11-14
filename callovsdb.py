@@ -17,7 +17,8 @@ def gather_reply(socket):
     return json.loads(result)
 
 def insert_queue(socket,maxRate,minRate,db_name,current_id,db = DEFAULT_DB):
-    transact_insert_Queue = {"method":"transact", "params":[db_name,{"op":"insert" , "table":"Queue" , "row":{"other_config":["map",[["max-rate",str(maxRate)],["min-rate",str(minRate)]]]} } ] , "id": current_id}
+    #transact_insert_Queue = {"method":"transact", "params":[db_name,{"op":"insert" , "table":"Queue" , "row":{"other_config":["map",[["max-rate",str(maxRate)],["min-rate",str(minRate)]]]} } ] , "id": current_id}
+    transact_insert_Queue = {"method":"transact", "params":[db_name,{"op":"insert" , "table":"Queue" , "row":{"other_config":["map",[["min-rate",str(minRate)]]]} } ] , "id": current_id}
     socket.send(json.dumps(transact_insert_Queue))
     response = gather_reply(socket)
     return  response
