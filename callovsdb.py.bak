@@ -16,9 +16,9 @@ def gather_reply(socket):
         result += reply
     return json.loads(result)
 
-def insert_queue(socket,maxRate,minRate,db_name,current_id,db = DEFAULT_DB,priority = 0):
-    transact_insert_Queue = {"method":"transact", "params":[db_name,{"op":"insert" , "table":"Queue" , "row":{"other_config":["map",[["max-rate",str(maxRate)],["min-rate",str(minRate)],["priority",str(priority)]]]} } ] , "id": current_id}
-    #transact_insert_Queue = {"method":"transact", "params":[db_name,{"op":"insert" , "table":"Queue" , "row":{"other_config":["map",[["min-rate",str(minRate)]]]} } ] , "id": current_id}
+def insert_queue(socket,maxRate,minRate,db_name,current_id,db = DEFAULT_DB):
+    #transact_insert_Queue = {"method":"transact", "params":[db_name,{"op":"insert" , "table":"Queue" , "row":{"other_config":["map",[["max-rate",str(maxRate)],["min-rate",str(minRate)]]]} } ] , "id": current_id}
+    transact_insert_Queue = {"method":"transact", "params":[db_name,{"op":"insert" , "table":"Queue" , "row":{"other_config":["map",[["min-rate",str(minRate)]]]} } ] , "id": current_id}
     socket.send(json.dumps(transact_insert_Queue))
     response = gather_reply(socket)
     return  response
@@ -95,8 +95,8 @@ def append_queue_in_QoS(socket,uuid_qos,uuid_queue,current_id,db_name):
     queue_in_QoS.append([queue_lastOfindex ,["uuid",uuid_queue]])
     return json.dumps(queue_in_QoS),queue_lastOfindex
 
-def create_defaultQueue(socket,link_speed,db_name,current_id,priority = 0):
-    result = insert_queue(socket,str(link_speed),str(1),db_name,current_id,priority)
+def create_defaultQueue(socket,link_speed,db_name,current_id):
+    result = insert_queue(socket,str(link_speed),str(link_speed),db_name,current_id)
     uuid_queue_temp = result['result'][0]
     uuid_queue = uuid_queue_temp['uuid'][1]
 
@@ -170,10 +170,10 @@ def create_queue(name_port,bw,id,ovsdb_IP=None,ovsdb_Port=6640):
     current_id += 1
 
     if not qos_in_port:
-        uuid_default_queue = create_defaultQueue(s,10000000000,db_name,current_id,50000)
+        uuid_default_queue = create_defaultQueue(s,100000000000,db_name,current_id)
         current_id += 1
         #result = insert_QoS(s,uuid_default_queue,str(link_speed),db_name,current_id)
-        result = insert_QoS(s,uuid_default_queue,str(10000000000),db_name,current_id)
+        result = insert_QoS(s,uuid_default_queue,str(100000000000),db_name,current_id)
 
         current_id += 1
         uuid_qos_temp = result['result'][0]
