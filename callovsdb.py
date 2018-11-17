@@ -96,7 +96,9 @@ def append_queue_in_QoS(socket,uuid_qos,uuid_queue,current_id,db_name):
     return json.dumps(queue_in_QoS),queue_lastOfindex
 
 def create_defaultQueue(socket,link_speed,db_name,current_id,priority = 0):
-    result = insert_queue(socket,str(link_speed),str(1),db_name,current_id,priority)
+    #socket,maxRate,minRate,db_name,current_id,db = DEFAULT_DB,priority = 0
+    result = insert_queue(socket=socket,maxRate=str(link_speed),minRate=str(1),db_name=db_name,current_id=current_id,db = DEFAULT_DB,priority = priority)
+    #result = insert_queue(socket,str(link_speed),str(1),db_name,current_id,priority)
     uuid_queue_temp = result['result'][0]
     uuid_queue = uuid_queue_temp['uuid'][1]
 
@@ -170,7 +172,9 @@ def create_queue(name_port,bw,id,ovsdb_IP=None,ovsdb_Port=6640):
     current_id += 1
 
     if not qos_in_port:
-        uuid_default_queue = create_defaultQueue(s,10000000000,db_name,current_id,50000)
+        #socket,link_speed,db_name,current_id,priority = 0
+        uuid_default_queue = create_defaultQueue(socket=s,link_speed=10000000000,db_name=db_name,current_id=current_id,priority=50000)
+        #uuid_default_queue = create_defaultQueue(s,10000000000,db_name,current_id,50000)
         current_id += 1
         #result = insert_QoS(s,uuid_default_queue,str(link_speed),db_name,current_id)
         result = insert_QoS(s,uuid_default_queue,str(10000000000),db_name,current_id)
